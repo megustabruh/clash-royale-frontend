@@ -1,13 +1,15 @@
 
 import { useEffect, useState } from 'react';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
 function App() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    fetch('http://localhost:8000/api/data')
+    fetch(`${API_URL}/api/data`)
       .then((res) => {
         if (!res.ok) throw new Error('Network response was not ok');
         return res.json();

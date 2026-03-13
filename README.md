@@ -6,7 +6,7 @@ This project is a React frontend created with Vite, intended for deployment on A
 
 1. **Install dependencies:**
    ```sh
-   cd app
+   cd frontend
    npm install
    ```
 2. **Start development server:**
@@ -26,8 +26,8 @@ This project is a React frontend created with Vite, intended for deployment on A
 - Update API endpoints in your React app to point to your backend script as needed.
 
 ## Project Structure
-- `app/` - React frontend source code
-- `app/dist/` - Production build output
+- `frontend/` - React frontend source code
+- `frontend/dist/` - Production build output
 
 ---
 
