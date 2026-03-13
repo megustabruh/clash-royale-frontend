@@ -105,11 +105,11 @@ function AllCardsTable({ cards }) {
 
   const sortedCards = [...cards].sort((a, b) => {
     let aVal, bVal;
+    const rarityOrder = { CHAMPION: 5, LEGENDARY: 4, EPIC: 3, RARE: 2, COMMON: 1 };
     switch (sortCol) {
       case 'name': aVal = a.name.toLowerCase(); bVal = b.name.toLowerCase(); break;
       case 'level': aVal = a.level; bVal = b.level; break;
       case 'rarity': 
-        const rarityOrder = { CHAMPION: 5, LEGENDARY: 4, EPIC: 3, RARE: 2, COMMON: 1 };
         aVal = rarityOrder[a.rarity] || 0; bVal = rarityOrder[b.rarity] || 0; break;
       case 'elixir': aVal = a.elixirs; bVal = b.elixirs; break;
       case 'achievements': aVal = a.achievement_lefts; bVal = b.achievement_lefts; break;
@@ -125,7 +125,7 @@ function AllCardsTable({ cards }) {
     return 0;
   });
 
-  const SortHeader = ({ col, label }) => (
+  const renderSortHeader = (col, label) => (
     <th style={{ ...styles.th, cursor: 'pointer', userSelect: 'none' }} onClick={() => handleSort(col)}>
       {label} {sortCol === col ? (sortDir === 'asc' ? '▲' : '▼') : ''}
     </th>
@@ -139,14 +139,14 @@ function AllCardsTable({ cards }) {
           <thead>
             <tr>
               <th style={styles.th}>#</th>
-              <SortHeader col="name" label="Name" />
-              <SortHeader col="level" label="Level" />
-              <SortHeader col="rarity" label="Rarity" />
-              <SortHeader col="elixir" label="Elixir" />
-              <SortHeader col="achievements" label="Achievements" />
-              <SortHeader col="type" label="Type" />
-              <SortHeader col="evo" label="Evo" />
-              <SortHeader col="priority" label="Priority" />
+              {renderSortHeader('name', 'Name')}
+              {renderSortHeader('level', 'Level')}
+              {renderSortHeader('rarity', 'Rarity')}
+              {renderSortHeader('elixir', 'Elixir')}
+              {renderSortHeader('achievements', 'Achievements')}
+              {renderSortHeader('type', 'Type')}
+              {renderSortHeader('evo', 'Evo')}
+              {renderSortHeader('priority', 'Priority')}
             </tr>
           </thead>
           <tbody>
