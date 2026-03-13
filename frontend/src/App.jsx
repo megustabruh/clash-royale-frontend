@@ -90,6 +90,10 @@ function AllCardsTable({ cards }) {
   const [sortCol, setSortCol] = useState('name');
   const [sortDir, setSortDir] = useState('asc');
 
+  if (!cards || !Array.isArray(cards)) {
+    return <div style={styles.section}><h2>All Cards</h2><p>No data available</p></div>;
+  }
+
   const handleSort = (col) => {
     if (sortCol === col) {
       setSortDir(sortDir === 'asc' ? 'desc' : 'asc');
@@ -170,6 +174,9 @@ function AllCardsTable({ cards }) {
 }
 
 function NormalDeck({ deck }) {
+  if (!deck || !Array.isArray(deck)) {
+    return <div style={styles.section}><h2>Normal Deck</h2><p>No data available</p></div>;
+  }
   return (
     <div style={styles.section}>
       <h2>Normal Deck</h2>
@@ -183,6 +190,9 @@ function NormalDeck({ deck }) {
 }
 
 function ClanWarDecks({ decks }) {
+  if (!decks || !Array.isArray(decks)) {
+    return <div style={styles.section}><h2>Clan War Decks</h2><p>No data available</p></div>;
+  }
   return (
     <div style={styles.section}>
       <h2>Clan War Decks (4 Decks)</h2>
@@ -190,7 +200,7 @@ function ClanWarDecks({ decks }) {
         <div key={idx} style={{ marginBottom: 16 }}>
           <h3>Deck {idx + 1}</h3>
           <div>
-            {deck.map((card) => (
+            {(deck || []).map((card) => (
               <span key={card.name} style={styles.deckCard}>
                 {card.name} (Lv{card.level}, {card.achievement_lefts} achv)
               </span>
@@ -203,7 +213,11 @@ function ClanWarDecks({ decks }) {
 }
 
 function AchievementStats({ stats }) {
-  const maxValue = Math.max(...Object.values(stats));
+  if (!stats || typeof stats !== 'object') {
+    return <div style={styles.section}><h2>Achievement Stats</h2><p>No data available</p></div>;
+  }
+  const values = Object.values(stats);
+  const maxValue = values.length > 0 ? Math.max(...values) : 1;
   return (
     <div style={styles.section}>
       <h2>Achievements Left by Card Type</h2>
@@ -218,12 +232,15 @@ function AchievementStats({ stats }) {
 }
 
 function UpgradeRecommendations({ data }) {
+  if (!data || !data.by_rarity) {
+    return <div style={styles.section}><h2>Upgrade Recommendations</h2><p>No data available</p></div>;
+  }
   return (
     <div style={styles.section}>
       <h2>Cards to Upgrade</h2>
-      <p><strong>Current Total Achievements:</strong> {data.current_total}</p>
-      <p><strong>Max Total (all cards maxed):</strong> {data.max_total}</p>
-      <p><strong>Potential Gain:</strong> +{data.max_total - data.current_total}</p>
+      <p><strong>Current Total Achievements:</strong> {data.current_total || 0}</p>
+      <p><strong>Max Total (all cards maxed):</strong> {data.max_total || 0}</p>
+      <p><strong>Potential Gain:</strong> +{(data.max_total || 0) - (data.current_total || 0)}</p>
 
       {Object.entries(data.by_rarity).map(([rarity, cards]) => (
         <div key={rarity} style={{ marginTop: 16 }}>
@@ -255,6 +272,9 @@ function UpgradeRecommendations({ data }) {
 }
 
 function UpgradePriority({ cards }) {
+  if (!cards || !Array.isArray(cards)) {
+    return <div style={styles.section}><h2>Upgrade Priority</h2><p>No data available</p></div>;
+  }
   return (
     <div style={styles.section}>
       <h2>Upgrade Priority List</h2>
@@ -297,6 +317,9 @@ function UpgradePriority({ cards }) {
 }
 
 function UpgradeByRarity({ data }) {
+  if (!data || typeof data !== 'object') {
+    return <div style={styles.section}><h2>Upgrade by Rarity</h2><p>No data available</p></div>;
+  }
   const rarityOrder = ['CHAMPION', 'LEGENDARY', 'EPIC', 'RARE', 'COMMON'];
   return (
     <div style={styles.section}>
@@ -343,6 +366,9 @@ function UpgradeByRarity({ data }) {
 }
 
 function ClanWarCustom({ decks }) {
+  if (!decks || !Array.isArray(decks)) {
+    return <div style={styles.section}><h2>Clan War Custom</h2><p>No data available</p></div>;
+  }
   return (
     <div style={styles.section}>
       <h2>Clan War Custom Decks</h2>
