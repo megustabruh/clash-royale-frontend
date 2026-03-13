@@ -50,6 +50,10 @@ function App() {
   if (error) return <div style={{ textAlign: 'center', padding: 48, color: 'red' }}>Error: {error}</div>;
   if (!data) return <div style={{ textAlign: 'center', padding: 48, color: 'orange' }}>No data received from API</div>;
 
+  // Debug: show available data keys
+  console.log('Data keys:', Object.keys(data));
+  console.log('normal_deck:', data.normal_deck);
+
   const tabs = [
     { id: 'cards', label: '📋 All Cards' },
     { id: 'normal_deck', label: '🎮 Normal Deck' },
@@ -177,15 +181,21 @@ function AllCardsTable({ cards }) {
 }
 
 function NormalDeck({ deck }) {
-  if (!deck || !Array.isArray(deck)) {
-    return <div style={styles.section}><h2>Normal Deck</h2><p>No data available</p></div>;
+  console.log('NormalDeck received:', deck, 'type:', typeof deck, 'isArray:', Array.isArray(deck));
+  if (!deck || !Array.isArray(deck) || deck.length === 0) {
+    return (
+      <div style={styles.section}>
+        <h2>Normal Deck</h2>
+        <p>No data available (received: {JSON.stringify(deck)})</p>
+      </div>
+    );
   }
   return (
     <div style={styles.section}>
-      <h2>Normal Deck</h2>
+      <h2>Normal Deck ({deck.length} cards)</h2>
       <div>
-        {deck.map((name) => (
-          <span key={name} style={styles.deckCard}>{name}</span>
+        {deck.map((name, idx) => (
+          <span key={idx} style={styles.deckCard}>{typeof name === 'string' ? name : JSON.stringify(name)}</span>
         ))}
       </div>
     </div>
