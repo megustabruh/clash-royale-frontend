@@ -1,9 +1,13 @@
 # main.py - Clash Royale Backend API (EC2)
 
+import json
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from functools import cmp_to_key
+from pydantic import BaseModel
+from typing import List
 
 from clash_royale import (
     Config, DeckSelector, create_comparator, calculate_achievement_lefts,
@@ -22,6 +26,81 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Settings file path (stored alongside main.py)
+SETTINGS_FILE = os.path.join(os.path.dirname(__file__), "user_settings.json")
+
+# Default settings configuration
+DEFAULT_SETTINGS = {
+    "boostedCards": ["megaminion", "zap"],
+    "excludedCards": ["giantbuffer", "mergemaiden"],
+    "minimumLevel": 13,
+    "maxElixir": 33,
+    "highPriorityCards": ["musketeer", "megaminion", "fireball", "zap", "miner", "cannon", "thelog", "balloon", "knight", "wallbreakers"],
+    "secondaryPriorityCards": ["hogrider", "battleram", "royalhogs", "suspiciousbush", "ramrider"],
+    "mustUseCards": ["hogrider", "battleram", "royalhogs", "suspiciousbush", "ramrider"],
+}
+
+
+class SettingsModel(BaseModel):
+    boostedCards: List[str]
+    excludedCards: List[str]
+    minimumLevel: int
+    maxElixir: int
+    highPriorityCards: List[str]
+    secondaryPriorityCards: List[str]
+    mustUseCards: List[str]
+
+
+def load_settings():
+    """Load settings from file, return defaults if not found."""
+    try:
+        if os.path.exists(SETTINGS_FILE):
+            with open(SETTINGS_FILE, "r", encoding="utf-8") as f:
+                saved = json.load(f)
+                # Merge with defaults to ensure all keys exist
+                return {**DEFAULT_SETTINGS, **saved}
+    except (IOError, json.JSONDecodeError) as e:
+        print(f"Error loading settings: {e}")
+    return DEFAULT_SETTINGS.copy()
+
+
+def save_settings(settings: dict):
+    """Save settings to file."""
+    try:
+        with open(SETTINGS_FILE, "w", encoding="utf-8") as f:
+            json.dump(settings, f, indent=2)
+        return True
+    except IOError as e:
+        print(f"Error saving settings: {e}")
+        return False
+
+
+@app.get("/api/settings")
+def get_settings():
+    """Get current settings."""
+    return JSONResponse(load_settings())
+
+
+@app.post("/api/settings")
+def update_settings(settings: SettingsModel):
+    """Save settings."""
+    settings_dict = settings.model_dump()
+    if save_settings(settings_dict):
+        return JSONResponse({"success": True, "settings": settings_dict})
+    return JSONResponse({"success": False, "error": "Failed to save settings"}, status_code=500)
+
+
+@app.delete("/api/settings")
+def reset_settings():
+    """Reset settings to defaults."""
+    try:
+        if os.path.exists(SETTINGS_FILE):
+            os.remove(SETTINGS_FILE)
+        return JSONResponse({"success": True, "settings": DEFAULT_SETTINGS})
+    except OSError as e:
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+
 
 def get_config():
     return Config(token=API_TOKEN, boosted_cards=("megaminion", "zap"))

@@ -53,6 +53,9 @@ const styles = {
   settingsNumber: { padding: '6px 10px', borderRadius: 4, border: '1px solid #ccc', width: 80 },
   refreshBtn: { padding: '10px 24px', background: '#4caf50', color: 'white', border: 'none', borderRadius: 4, cursor: 'pointer', fontWeight: 'bold', fontSize: 16 },
   toggleBtn: { padding: '8px 16px', background: '#607d8b', color: 'white', border: 'none', borderRadius: 4, cursor: 'pointer', marginBottom: 16 },
+  saveBtn: { padding: '10px 24px', background: '#2196f3', color: 'white', border: 'none', borderRadius: 4, cursor: 'pointer', fontWeight: 'bold', fontSize: 16 },
+  resetBtn: { padding: '10px 24px', background: '#ff9800', color: 'white', border: 'none', borderRadius: 4, cursor: 'pointer', fontWeight: 'bold', fontSize: 16 },
+  savedIndicator: { marginLeft: 12, color: '#4caf50', fontWeight: 'bold', fontSize: 14 },
 };
 
 // =============================================================================
@@ -300,18 +303,25 @@ function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [config, setConfig] = useState(DEFAULT_CONFIG);
   const [analysisVersion, setAnalysisVersion] = useState(0); // Trigger re-analysis
+  const [saveStatus, setSaveStatus] = useState(null); // 'saved', 'loading', 'error', or null
 
-  // Fetch raw cards from API once
+  // Fetch raw cards and settings from API on mount
   useEffect(() => {
-    fetch(`${API_URL}/api/data`)
-      .then((res) => {
+    Promise.all([
+      fetch(`${API_URL}/api/data`).then(res => {
         if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
         return res.json();
-      })
-      .then((responseData) => {
+      }),
+      fetch(`${API_URL}/api/settings`).then(res => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+        return res.json();
+      }).catch(() => DEFAULT_CONFIG) // Fallback to defaults if settings fail
+    ])
+      .then(([responseData, savedSettings]) => {
         console.log('API Response:', responseData);
-        // Store raw cards from backend
+        console.log('Loaded settings:', savedSettings);
         setRawCards(responseData.cards);
+        setConfig({ ...DEFAULT_CONFIG, ...savedSettings });
         setLoading(false);
       })
       .catch((err) => {
@@ -335,6 +345,40 @@ function App() {
 
   const updateConfig = (key, value) => {
     setConfig(prev => ({ ...prev, [key]: value }));
+    setSaveStatus(null); // Clear save status when config changes
+  };
+
+  const handleSaveSettings = async () => {
+    setSaveStatus('loading');
+    try {
+      const res = await fetch(`${API_URL}/api/settings`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(config),
+      });
+      if (!res.ok) throw new Error('Failed to save');
+      setSaveStatus('saved');
+      setTimeout(() => setSaveStatus(null), 3000);
+    } catch (e) {
+      console.error('Save error:', e);
+      setSaveStatus('error');
+      setTimeout(() => setSaveStatus(null), 3000);
+    }
+  };
+
+  const handleResetSettings = async () => {
+    setSaveStatus('loading');
+    try {
+      const res = await fetch(`${API_URL}/api/settings`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Failed to reset');
+      const data = await res.json();
+      setConfig({ ...DEFAULT_CONFIG, ...data.settings });
+      setSaveStatus(null);
+    } catch (e) {
+      console.error('Reset error:', e);
+      setConfig(DEFAULT_CONFIG);
+      setSaveStatus(null);
+    }
   };
 
   const parseCardList = (str) => str.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
@@ -352,6 +396,7 @@ function App() {
     { id: 'upgrade_priority', label: '🎯 Upgrade Priority' },
     { id: 'upgrade_rarity', label: '💎 By Rarity' },
     { id: 'clan_war_custom', label: '🏆 CW Custom' },
+    { id: 'deck_builder', label: '🔨 Deck Builder' },
   ];
 
   return (
@@ -442,14 +487,22 @@ function App() {
             />
           </div>
 
-          <div style={{ marginTop: 16 }}>
+          <div style={{ marginTop: 16, display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
             <button style={styles.refreshBtn} onClick={handleRefresh}>
               🔄 Refresh Analysis
             </button>
-            <span style={{ marginLeft: 16, color: '#666', fontSize: 14 }}>
-              Analysis is computed in frontend. Changes apply automatically.
-            </span>
+            <button style={styles.saveBtn} onClick={handleSaveSettings} disabled={saveStatus === 'loading'}>
+              {saveStatus === 'loading' ? '⏳ Saving...' : '💾 Save Settings'}
+            </button>
+            <button style={styles.resetBtn} onClick={handleResetSettings} disabled={saveStatus === 'loading'}>
+              ↩️ Reset to Defaults
+            </button>
+            {saveStatus === 'saved' && <span style={styles.savedIndicator}>✓ Settings saved to server!</span>}
+            {saveStatus === 'error' && <span style={{ ...styles.savedIndicator, color: '#f44336' }}>✗ Failed to save</span>}
           </div>
+          <p style={{ marginTop: 12, color: '#666', fontSize: 14 }}>
+            Changes apply immediately. Click "Save Settings" to persist on the server (works across browsers).
+          </p>
         </div>
       )}
 
@@ -473,6 +526,7 @@ function App() {
       {activeTab === 'upgrade_priority' && <UpgradePriority cards={data.upgrade_priority} />}
       {activeTab === 'upgrade_rarity' && <UpgradeByRarity data={data.upgrade_by_rarity} />}
       {activeTab === 'clan_war_custom' && <ClanWarCustom decks={data.clan_war_custom} />}
+      {activeTab === 'deck_builder' && <DeckBuilder cards={data.cards} />}
     </div>
   );
 }
@@ -807,6 +861,172 @@ function ClanWarCustom({ decks }) {
           </table>
         </div>
       ))}
+    </div>
+  );
+}
+
+function DeckBuilder({ cards }) {
+  const [selectedCards, setSelectedCards] = useState(new Set());
+  const [deckSize, setDeckSize] = useState(8);
+  const [searchTerm, setSearchTerm] = useState('');
+
+  if (!cards || !Array.isArray(cards)) {
+    return <div style={styles.section}><h2>Deck Builder</h2><p>No data available</p></div>;
+  }
+
+  const toggleCard = (cardName) => {
+    setSelectedCards(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(cardName)) {
+        newSet.delete(cardName);
+      } else {
+        newSet.add(cardName);
+      }
+      return newSet;
+    });
+  };
+
+  const selectAll = () => {
+    setSelectedCards(new Set(filteredCards.map(c => c.name)));
+  };
+
+  const clearAll = () => {
+    setSelectedCards(new Set());
+  };
+
+  // Filter cards by search term
+  const filteredCards = cards.filter(c => 
+    c.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  // Build deck from selected cards (sorted by lowest achievement_lefts first)
+  const selectedCardsList = cards.filter(c => selectedCards.has(c.name));
+  const sortedByAchievements = [...selectedCardsList].sort((a, b) => a.achievement_lefts - b.achievement_lefts);
+  const generatedDeck = sortedByAchievements.slice(0, deckSize);
+
+  const totalElixir = generatedDeck.reduce((sum, c) => sum + c.elixirs, 0);
+  const avgElixir = generatedDeck.length > 0 ? (totalElixir / generatedDeck.length).toFixed(1) : 0;
+  const totalAchievements = generatedDeck.reduce((sum, c) => sum + c.achievement_lefts, 0);
+
+  // Group cards by type for easier selection
+  const cardsByType = {};
+  for (const card of filteredCards) {
+    const type = card.cr_card_type || 'OTHER';
+    if (!cardsByType[type]) cardsByType[type] = [];
+    cardsByType[type].push(card);
+  }
+
+  const builderStyles = {
+    container: { display: 'flex', gap: 24, flexWrap: 'wrap' },
+    selectionPanel: { flex: '1 1 400px', maxHeight: 500, overflowY: 'auto', border: '1px solid #ddd', borderRadius: 8, padding: 16, background: '#fafafa' },
+    deckPanel: { flex: '1 1 400px', padding: 16, background: '#e8f5e9', borderRadius: 8, border: '1px solid #a5d6a7' },
+    typeGroup: { marginBottom: 16 },
+    typeHeader: { fontWeight: 'bold', marginBottom: 8, color: '#555', borderBottom: '1px solid #ddd', paddingBottom: 4 },
+    cardCheckbox: { display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', cursor: 'pointer' },
+    cardLabel: { flex: 1 },
+    achievementBadge: { fontSize: 12, color: '#666', background: '#e0e0e0', padding: '2px 6px', borderRadius: 4 },
+    searchInput: { padding: '8px 12px', borderRadius: 4, border: '1px solid #ccc', width: '100%', marginBottom: 12 },
+    btnGroup: { display: 'flex', gap: 8, marginBottom: 12 },
+    smallBtn: { padding: '6px 12px', background: '#607d8b', color: 'white', border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: 12 },
+    deckSizeInput: { width: 60, padding: '4px 8px', borderRadius: 4, border: '1px solid #ccc' },
+  };
+
+  return (
+    <div style={styles.section}>
+      <h2>🔨 Deck Builder - Low Achievement Cards</h2>
+      <p>Select cards from the pool, and the deck will be built using cards with the <strong>lowest achievement_lefts</strong> first.</p>
+
+      <div style={builderStyles.container}>
+        {/* Card Selection Panel */}
+        <div style={builderStyles.selectionPanel}>
+          <h3 style={{ marginTop: 0 }}>📦 Card Pool ({selectedCards.size} selected)</h3>
+          
+          <input
+            type="text"
+            placeholder="Search cards..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            style={builderStyles.searchInput}
+          />
+
+          <div style={builderStyles.btnGroup}>
+            <button style={builderStyles.smallBtn} onClick={selectAll}>Select All Visible</button>
+            <button style={{ ...builderStyles.smallBtn, background: '#f44336' }} onClick={clearAll}>Clear All</button>
+          </div>
+
+          {Object.entries(cardsByType).sort().map(([type, typeCards]) => (
+            <div key={type} style={builderStyles.typeGroup}>
+              <div style={builderStyles.typeHeader}>{type} ({typeCards.length})</div>
+              {typeCards.sort((a, b) => a.name.localeCompare(b.name)).map(card => (
+                <label key={card.name} style={builderStyles.cardCheckbox}>
+                  <input
+                    type="checkbox"
+                    checked={selectedCards.has(card.name)}
+                    onChange={() => toggleCard(card.name)}
+                  />
+                  <span style={builderStyles.cardLabel}>{card.name}</span>
+                  <span style={builderStyles.achievementBadge}>Achv: {card.achievement_lefts}</span>
+                </label>
+              ))}
+            </div>
+          ))}
+        </div>
+
+        {/* Generated Deck Panel */}
+        <div style={builderStyles.deckPanel}>
+          <h3 style={{ marginTop: 0 }}>🎯 Generated Deck</h3>
+          
+          <div style={{ marginBottom: 12 }}>
+            <label>
+              Deck Size: 
+              <input
+                type="number"
+                min={1}
+                max={20}
+                value={deckSize}
+                onChange={(e) => setDeckSize(parseInt(e.target.value) || 8)}
+                style={builderStyles.deckSizeInput}
+              />
+            </label>
+          </div>
+
+          {generatedDeck.length > 0 ? (
+            <>
+              <p>
+                <strong>Cards:</strong> {generatedDeck.length} |
+                <strong> Avg Elixir:</strong> {avgElixir} |
+                <strong> Total Achievements:</strong> {totalAchievements}
+              </p>
+              <table style={styles.table}>
+                <thead>
+                  <tr>
+                    <th style={styles.th}>#</th>
+                    <th style={styles.th}>Name</th>
+                    <th style={styles.th}>Level</th>
+                    <th style={styles.th}>Achievements</th>
+                    <th style={styles.th}>Elixir</th>
+                    <th style={styles.th}>Type</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {generatedDeck.map((card, i) => (
+                    <tr key={card.name} style={{ background: i % 2 === 0 ? '#fff' : '#f9f9f9' }}>
+                      <td style={styles.td}>{i + 1}</td>
+                      <td style={styles.td}><strong>{card.name}</strong></td>
+                      <td style={styles.td}>{card.level}</td>
+                      <td style={styles.td}>{card.achievement_lefts}</td>
+                      <td style={styles.td}>{card.elixirs}</td>
+                      <td style={styles.td}>{card.cr_card_type || '-'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </>
+          ) : (
+            <p style={{ color: '#666', fontStyle: 'italic' }}>Select cards from the pool to generate a deck.</p>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
