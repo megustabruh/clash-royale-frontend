@@ -185,6 +185,8 @@ BADGE_TO_CARD_MAPPINGS: Dict[str, str] = {
     "axeman": "executioner",
     "dartbarrell": "flyingmachine",
     "xbow": "x-bow",
+    "giantbuffer": "runegiant",
+    "mergemaiden": "spiritempress"
 }
 
 # Priority cards for upgrade recommendations
