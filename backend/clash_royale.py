@@ -95,7 +95,7 @@ class Config:
     player_tag: str = "U8PVCPV98"
     boosted_cards: Tuple[str, ...] = ("megaminion", "zap")
     heroes: Tuple[str, ...] = ("knight", "giant")  # Currently owned heroes
-    excluded_cards: Tuple[str, ...] = ("giantbuffer", "mergemaiden")
+    excluded_cards: Tuple[str, ...] = ()
     minimum_level: int = 13
     max_elixir: int = 33
     min_elixir: int = 31
