@@ -120,7 +120,7 @@ CARD_TYPE_MAPPINGS: Dict[CRCardType, frozenset] = {
     ]),
     CRCardType.SMALL_SPELL: frozenset([
         "void", "rage", "goblincurse", "giantsnowball", "arrows", "thelog",
-        "zap", "barbarianbarrel", "tornado", "royaldelivery", "freeze"
+        "zap", "barbarianbarrel", "tornado", "royaldelivery", "freeze", "vines"
     ]),
     CRCardType.BIG_SPELL: frozenset([
         "fireball", "lightning", "rocket", "poison", "earthquake"
@@ -148,7 +148,7 @@ CARD_TYPE_MAPPINGS: Dict[CRCardType, frozenset] = {
     CRCardType.MINI_TANK: frozenset([
         "speargoblins", "rascals", "icegolem", "goldenknight", "prince",
         "darkprince", "bandit", "minipekka", "fisherman", "battlehealer",
-        "royalghost", "knight", "valkyrie", "miner", "mightyminer"
+        "royalghost", "knight", "valkyrie", "miner", "mightyminer", "spiritempress"
     ]),
     CRCardType.OTHERS: frozenset([
         "mirror", "giantskeleton", "royalrecruits", "nightwitch", "cannoncart",
