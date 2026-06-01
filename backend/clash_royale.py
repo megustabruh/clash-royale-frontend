@@ -509,8 +509,17 @@ class DeckSelector:
         selected: List[Card] = []
         used_types: Set[CRCardType] = set()
 
+        # Phase 0: Prioritize boosted cards first (if they exist in available cards)
+        boosted_in_available = [c for c in cards if c.name in self.config.boosted_cards]
+        for card in boosted_in_available[:choices]:  # Limit to choices to not over-select
+            selected.append(card)
+            cards.remove(card)
+            if card.clash_royale_card_type:
+                used_types.add(card.clash_royale_card_type)
+            self._log(f"Added boosted card: {card.name}")
+
         # Phase 1: Select diverse card types
-        for _ in range(choices):
+        for _ in range(choices - len(selected)):  # Adjust for already selected boosted cards
             if not cards:
                 break
 
