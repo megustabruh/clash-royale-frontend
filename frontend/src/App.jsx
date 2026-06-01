@@ -8,6 +8,7 @@ const DEFAULT_CONFIG = {
   excludedCards: ['giantbuffer', 'mergemaiden'],
   minimumLevel: 13,
   maxElixir: 33,
+  kingLevel: 16,  // King Tower level for boosted cards
   highPriorityCards: ['musketeer', 'megaminion', 'fireball', 'zap', 'miner', 'cannon', 'thelog', 'balloon', 'knight', 'wallbreakers'],
   secondaryPriorityCards: ['hogrider', 'battleram', 'royalhogs', 'suspiciousbush', 'ramrider'],
   mustUseCards: ['hogrider', 'battleram', 'royalhogs', 'suspiciousbush', 'ramrider'],
@@ -78,13 +79,15 @@ function analyzeAllData(rawCards, config) {
   }
 
   // Step 1: Process cards with config
+  const kingLevel = config.kingLevel || 16;  // Use King Tower level for boosted cards
   const cards = rawCards
     .filter(c => !config.excludedCards.includes(c.name))
     .map(c => ({
       ...c,
-      temp_level: config.boostedCards.includes(c.name) ? 14 : c.level,
+      temp_level: config.boostedCards.includes(c.name) ? kingLevel : c.level,
       is_high_priority: config.highPriorityCards.includes(c.name),
       is_secondary_priority: config.secondaryPriorityCards.includes(c.name),
+      is_boosted: config.boostedCards.includes(c.name),
     }));
 
   const cardMap = Object.fromEntries(cards.map(c => [c.name, c]));
@@ -174,10 +177,15 @@ function analyzeAllData(rawCards, config) {
     recommendationsByRarity[rarity] = recommendationsByRarity[rarity].slice(0, 10);
   }
 
-  // Step 6: Normal deck selection (top 8 cards by achievements)
+  // Step 6: Normal deck selection (top 8 cards by achievements, prioritizing boosted cards)
   const deckSortedCards = [...cards]
     .filter(c => c.temp_level >= config.minimumLevel)
-    .sort((a, b) => b.achievement_lefts - a.achievement_lefts);
+    .sort((a, b) => {
+      // Boosted cards come first
+      if (a.is_boosted !== b.is_boosted) return a.is_boosted ? -1 : 1;
+      // Then sort by achievements
+      return b.achievement_lefts - a.achievement_lefts;
+    });
   const normalDeck = deckSortedCards.slice(0, 8).map(c => c.name);
 
   // Step 7: Clan war decks (4 decks, non-overlapping)
@@ -471,7 +479,19 @@ function App() {
               value={config.minimumLevel}
               onChange={(e) => updateConfig('minimumLevel', parseInt(e.target.value) || 1)}
               min={1}
-              max={14}
+              max={16}
+            />
+          </div>
+
+          <div style={styles.settingsRow}>
+            <span style={styles.settingsLabel}>King Level (Boost):</span>
+            <input
+              type="number"
+              style={styles.settingsNumber}
+              value={config.kingLevel || 16}
+              onChange={(e) => updateConfig('kingLevel', parseInt(e.target.value) || 16)}
+              min={1}
+              max={16}
             />
           </div>
 
