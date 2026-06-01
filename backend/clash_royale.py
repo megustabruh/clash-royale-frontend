@@ -102,6 +102,7 @@ class Config:
     is_clan_war: bool = False
     competitive_cap_level: int = 0
     seven_x_elixir: bool = False
+    king_level: int = 16  # King Tower level for boosted cards
 
 
 # =============================================================================
@@ -323,6 +324,7 @@ class DeckSelector:
         self.cards: List[Card] = []
         self.card_map: Dict[str, Card] = {}
         self.output_log: List[str] = []
+        self.player_king_level: int = config.king_level  # Store King Level from API
 
     def _log(self, message: str) -> None:
         """Log a message and store it in output."""
@@ -354,6 +356,11 @@ class DeckSelector:
             self._log("Failed to fetch player data")
             return False
 
+        # Extract King Tower level from API
+        if "expLevel" in data:
+            self.player_king_level = data["expLevel"]
+            self._log(f"King Tower Level: {self.player_king_level}")
+        
         self.cards = []
         self.card_map = {}
 
@@ -423,11 +430,11 @@ class DeckSelector:
         return True
 
     def _apply_boosted_levels(self) -> None:
-        """Apply boosted levels to cards."""
+        """Apply boosted levels to cards based on King Tower level."""
         for card in self.cards:
             card.temp_level = card.level
             if card.name in self.config.boosted_cards:
-                card.temp_level = 14
+                card.temp_level = self.player_king_level
 
     def _filter_cards(self, cards: List[Card]) -> List[Card]:
         """Apply level filters based on config."""
@@ -854,8 +861,8 @@ class DeckSelector:
             # Filter cards by level requirement
             def meets_level_req(card: Card) -> bool:
                 min_lvl = 13 if card.elixirs <= 2 else 14
-                # Consider boosted cards as level 14
-                effective_lvl = 14 if card.name in self.config.boosted_cards else card.level
+                # Consider boosted cards at King Tower level
+                effective_lvl = self.player_king_level if card.name in self.config.boosted_cards else card.level
                 return effective_lvl >= min_lvl
 
             eligible_cards = [c for c in self.cards if meets_level_req(c)]

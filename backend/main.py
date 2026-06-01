@@ -36,6 +36,7 @@ DEFAULT_SETTINGS = {
     "excludedCards": ["giantbuffer", "mergemaiden"],
     "minimumLevel": 13,
     "maxElixir": 33,
+    "kingLevel": 16,
     "highPriorityCards": ["musketeer", "megaminion", "fireball", "zap", "miner", "cannon", "thelog", "balloon", "knight", "wallbreakers"],
     "secondaryPriorityCards": ["hogrider", "battleram", "royalhogs", "suspiciousbush", "ramrider"],
     "mustUseCards": ["hogrider", "battleram", "royalhogs", "suspiciousbush", "ramrider"],
@@ -47,6 +48,7 @@ class SettingsModel(BaseModel):
     excludedCards: List[str]
     minimumLevel: int
     maxElixir: int
+    kingLevel: int
     highPriorityCards: List[str]
     secondaryPriorityCards: List[str]
     mustUseCards: List[str]
@@ -103,7 +105,15 @@ def reset_settings():
 
 
 def get_config():
-    return Config(token=API_TOKEN, boosted_cards=("megaminion", "zap"))
+    settings = load_settings()
+    return Config(
+        token=API_TOKEN,
+        boosted_cards=tuple(settings.get("boostedCards", [])),
+        excluded_cards=tuple(settings.get("excludedCards", [])),
+        minimum_level=settings.get("minimumLevel", 13),
+        max_elixir=settings.get("maxElixir", 33),
+        king_level=settings.get("kingLevel", 16)
+    )
 
 def card_to_dict(c):
     return {

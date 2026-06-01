@@ -37,7 +37,11 @@ app.add_middleware(
 )
 
 def get_config():
-    return Config(token=API_TOKEN, boosted_cards=("megaminion", "zap"))
+    return Config(
+        token=API_TOKEN,
+        boosted_cards=("megaminion", "zap"),
+        king_level=16
+    )
 
 def card_to_dict(c):
     return {
